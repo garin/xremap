@@ -17,8 +17,20 @@ mrb_xw_fetch_window_class(mrb_state *mrb, mrb_value self)
   Atom net_wm_name = XInternAtom(display, "WM_CLASS", True);
 
   XTextProperty prop;
+  // TODO: 正しい処理方法に変える
+  // xmonad で ワークスペースを選択すると XGetTextProperty の結果が 0 になる(通常は1)
+  // (ワークスペースを ウィンドウ として認識するのは xmonad 独自?)
+  // 処理を進めると 下の while(1) 内で XErrorEvent errro_code 3(BadWindow) エラーが
+  // 発生し segmentation fault で xremap が終了する
+  //
+  // そのため、 XGetTextProperty が 0 の時は強制的に display_obj を返して処理を終了するようにした
+  // 意図しない #<Xremap::Display:0xXXX> が戻ることになるが segmentation fault は発生しなくなった
+  if (XGetTextProperty(display, window, &prop, net_wm_name) == 0) {
+    return display_obj;
+  }
 
   while (1) {
+    // ここで処理するのが正しい?
     if (XGetTextProperty(display, window, &prop, net_wm_name)) { break; }
 
     unsigned int nchildren;
